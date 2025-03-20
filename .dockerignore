@@ -1,0 +1,6 @@
+node_modules
+# README.md
+# npm-debug.log
+# Dockerfile
+# docker-compose.yml
+# deploy_app.sh

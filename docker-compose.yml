@@ -1,0 +1,15 @@
+version: '3.8' # 指定使用的 Docker Compose 文件格式的版本
+
+services:
+  mongo:
+    image: registry.cn-hangzhou.aliyuncs.com/misaka-images/mongo:6.0.2 # 会自动下载并安装配置文件中指定的镜像
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: topaz
+      MONGO_INITDB_ROOT_PASSWORD: ipcMasterTopazzz
+    volumes:
+      - mongo-data:/data/db # 命名卷。Docker 会自动在主机上创建并管理这个卷，并将其挂载到容器内的 /data/db 目录。
+volumes: 
+  mongo-data: # 定义命名卷。这个卷在主机上，但是在容器的管理之下。即使容器被删除，卷中的数据依然存在，可以在新容器中重新挂载使用。

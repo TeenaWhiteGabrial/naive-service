@@ -1,4 +1,5 @@
 import db from '../utils/pool'
+import { addTypeTask, paramType, typeTask } from "../type/task"
 
 export default class TaskService {
 

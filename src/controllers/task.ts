@@ -47,6 +47,17 @@ class TaskController {
         ctx.body = res
         return next()
     }
+    /**
+     * 删除任务
+     * @param ctx
+     * @param next
+     * @returns
+     */
+    deleteTask = async (ctx: Context, next: Next) => {
+        const res = await this.service.deleteTask(ctx.request.body)
+        ctx.body = res
+        return next()
+    }
 }
 
 export default new TaskController();

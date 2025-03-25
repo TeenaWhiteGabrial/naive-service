@@ -1,6 +1,9 @@
 export const CODE = {
   /** 业务错误码 */
-  buinessError: 400,
+  buinessError: {
+    code: 400,
+    msg: "业务错误"
+  },
   // 普通错误code 均为 -1；前端直接捕获-1的错误 抛出
   success: { code: 0, msg: "success" },
   missingParameters: {

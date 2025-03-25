@@ -150,10 +150,7 @@ export default class UserService {
       })
       return '密码重置成功'
     } else {
-      throw {
-        code: CODE.buinessError,
-        msg: '权限不足'
-      }
+      throw CODE.buinessError
     }
   }
 

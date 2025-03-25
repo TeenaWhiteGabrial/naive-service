@@ -7,7 +7,7 @@ const { dbName, user, password, host, port } =
     : DATABASE.development;
 const uri = `mongodb://${user}:${password}@${host}:${port}/?authSource=${dbName}`
 
-const client = new MongoClient(uri);
+export const client = new MongoClient(uri);
 
 /** 建立连接 */
 client.connect();

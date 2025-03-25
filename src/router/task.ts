@@ -2,7 +2,9 @@ import taskController from "../controllers/task";
 import koaRouter from "koa-router";
 import { methodType } from "../type/enum"
 
-const router = new koaRouter();
+const router = new koaRouter({
+    prefix: '/spc'
+});
 
 const routerList = [
     /** 新增任务 */

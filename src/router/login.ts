@@ -3,9 +3,9 @@ import koaRouter from "koa-router";
 import { methodType } from "../type/enum"
 
 const router = new koaRouter(
-  // {
-  //   prefix: '/open'
-  // }
+  {
+    prefix: '/spc'
+  }
 );
 /** 开放接口，不需要token */
 

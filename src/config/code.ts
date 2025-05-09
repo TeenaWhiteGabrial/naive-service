@@ -19,5 +19,10 @@ export const CODE = {
   operateFail: {
     code: 400,
     msg: '操作失败'
-  }
+  },
+  serverError: (message: string = '服务器内部错误') => ({
+    code: 500,
+    msg: message
+  })
 };
+

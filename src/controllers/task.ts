@@ -10,7 +10,7 @@ class TaskController {
      * @returns
      */
     addTask = async (ctx: Context, next: Next) => {
-        const res = await this.service.addTask(ctx.request.body)
+        const res = await this.service.addTask(ctx.userId, ctx.request.body)
         ctx.body = res
         return next()
     }
@@ -21,7 +21,7 @@ class TaskController {
      * @returns
      */
     changeTask = async (ctx: Context, next: Next) => {
-        const res = await this.service.changeTask(ctx.request.body)
+        const res = await this.service.changeTask(ctx.userId, ctx.request.body)
         ctx.body = res
         return next()
     }
@@ -32,7 +32,7 @@ class TaskController {
      * @returns
      */
     getTaskList = async (ctx: Context, next: Next) => {
-        const res = await this.service.getTaskList(ctx.request.body)
+        const res = await this.service.getTaskList(ctx.userId, ctx.request.body)
         ctx.body = res
         return next()
     }
@@ -43,7 +43,7 @@ class TaskController {
      * @returns
      */
     getTaskDetail = async (ctx: Context, next: Next) => {
-        const res = await this.service.getTaskDetail(ctx.request.body)
+        const res = await this.service.getTaskDetail(ctx.userId, ctx.request.body)
         ctx.body = res
         return next()
     }
@@ -54,7 +54,7 @@ class TaskController {
      * @returns
      */
     deleteTask = async (ctx: Context, next: Next) => {
-        const res = await this.service.deleteTask(ctx.request.body)
+        const res = await this.service.deleteTask(ctx.userId, ctx.request.body)
         ctx.body = res
         return next()
     }

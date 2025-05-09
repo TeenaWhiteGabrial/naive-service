@@ -40,7 +40,7 @@ export const getClientIpAddress = (ctx: Context) => {
 export const decodeToken = (token: string) => {
   let jwtInfo = jwt.verify(token, JWT.secret) as any;
   try {
-    return jwtInfo.userId;
+    return jwtInfo.userId as string;
   } catch (err) {
     return "token不合法";
   }

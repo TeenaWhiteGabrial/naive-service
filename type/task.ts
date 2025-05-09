@@ -21,7 +21,7 @@ export interface typeTask {
 export enum taskTypeEnum { // 枚举任务的类型
     WORK = '0',
     LIFE = '1',
-    FEATURE = '2'
+    STAR = '2'
 }
 
 export enum stateEnum { // 枚举状态

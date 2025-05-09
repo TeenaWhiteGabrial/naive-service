@@ -1,10 +1,13 @@
 import taskController from "../controllers/task";
 import koaRouter from "koa-router";
 import { methodType } from "../type/enum"
+import { jwtMiddlewareDeal } from "../middleware/jwt";
 
 const router = new koaRouter({
     prefix: '/spc'
 });
+/** 管理端，需要Token的相关接口 */
+router.use(jwtMiddlewareDeal);
 
 const routerList = [
     /** 新增任务 */

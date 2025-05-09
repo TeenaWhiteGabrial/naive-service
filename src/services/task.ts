@@ -11,9 +11,11 @@ export default class TaskService {
      * 根据条件查询任务List
      * @param param 
      */
-    async getTaskList(param: paramType) {
+    async getTaskList(userId: string, param: paramType) {
         const cl = db.collection('task-info');
-        let query: paramType = {};
+        let query: paramType = {
+            userId
+        };
 
         // 根据param中的字段构建查询条件
 
@@ -46,12 +48,13 @@ export default class TaskService {
      * @param task 
      * @returns 
      */
-    async addTask(task: addTypeTask) {
+    async addTask(userId: string, task: addTypeTask) {
         try {
             const cl = db.collection('task-info');
             if (!task.content) {
                 throw CODE.missingParameters;
             }
+            task.userId = userId; // 添加 userId 到任务对象中
 
             const res = await cl.insertOne(task);
 
@@ -68,7 +71,7 @@ export default class TaskService {
     /**
      * 修改任务
      */
-    async changeTask(task: typeTask) {
+    async changeTask(userId: string, task: typeTask) {
         try {
             if (!task._id || !ObjectId.isValid(task._id)) {
                 throw CODE.illegalRequest;
@@ -102,7 +105,7 @@ export default class TaskService {
      * @param _id
      * @returns
      */
-    async deleteTask(_id: string) { // 修正 String 为 string
+    async deleteTask(userId: string, _id: string) { // 修正 String 为 string
         const cl = db.collection('task-info');
         if (!_id) {
             throw CODE.illegalRequest;
@@ -122,7 +125,7 @@ export default class TaskService {
      * @param _id
      * @returns
      */
-    async getTaskDetail(_id: string) { // 修正 String 为 string
+    async getTaskDetail(userId: string, _id: string) { // 修正 String 为 string
         try {
             const cl = db.collection('task-info');
             const task = await cl.findOne({

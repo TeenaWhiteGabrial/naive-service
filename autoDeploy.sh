@@ -152,6 +152,10 @@ print_message "端口 27017 可用"
 print_info "清理无用的Docker资源..."
 docker system prune -f > /dev/null 2>&1
 
+# 清理可能冲突的网络
+print_info "清理Docker网络..."
+docker network prune -f 2>/dev/null || true
+
 # 构建并启动容器
 print_info "构建并启动容器..."
 cd $BUILD_DIR

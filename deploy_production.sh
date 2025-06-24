@@ -31,10 +31,17 @@ fi
 cleanup_containers() {
     echo "🧹 清理现有容器和服务..."
     
-    # 停止 docker-compose 服务
-    if docker-compose -f "$DOCKER_COMPOSE_FILE" ps -q 2>/dev/null | grep -q .; then
-        echo "⏹️  停止 Docker Compose 服务..."
-        docker-compose -f "$DOCKER_COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
+    # 停止 docker-compose 服务（兼容新旧版本）
+    if command -v docker-compose &> /dev/null; then
+        if docker-compose -f "$DOCKER_COMPOSE_FILE" ps -q 2>/dev/null | grep -q .; then
+            echo "⏹️  停止 Docker Compose 服务..."
+            docker-compose -f "$DOCKER_COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
+        fi
+    elif docker compose version &> /dev/null 2>&1; then
+        if docker compose -f "$DOCKER_COMPOSE_FILE" ps -q 2>/dev/null | grep -q .; then
+            echo "⏹️  停止 Docker Compose 服务..."
+            docker compose -f "$DOCKER_COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
+        fi
     fi
     
     # 清理指定名称的容器（如果存在）
@@ -83,18 +90,34 @@ docker image prune -f >/dev/null 2>&1 || true
 
 # 构建并启动容器
 echo "🔨 构建并启动容器..."
-docker-compose -f "$DOCKER_COMPOSE_FILE" up --build -d
+if command -v docker-compose &> /dev/null; then
+    docker-compose -f "$DOCKER_COMPOSE_FILE" up --build -d
+elif docker compose version &> /dev/null 2>&1; then
+    docker compose -f "$DOCKER_COMPOSE_FILE" up --build -d
+else
+    echo "❌ Docker Compose 未找到，请检查安装"
+    exit 1
+fi
 
 # 等待容器启动
 echo "⏳ 等待容器启动..."
 for i in {1..30}; do
-    if docker-compose -f "$DOCKER_COMPOSE_FILE" ps | grep -q "Up"; then
+    if command -v docker-compose &> /dev/null; then
+        COMPOSE_CMD="docker-compose"
+    elif docker compose version &> /dev/null 2>&1; then
+        COMPOSE_CMD="docker compose"
+    else
+        echo "❌ Docker Compose 未找到"
+        exit 1
+    fi
+    
+    if $COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" ps | grep -q "Up"; then
         echo "✅ 容器启动成功"
         break
     fi
     if [ $i -eq 30 ]; then
         echo "❌ 容器启动超时，查看日志："
-        docker-compose -f "$DOCKER_COMPOSE_FILE" logs --tail=50
+        $COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" logs --tail=50
         exit 1
     fi
     echo "⏳ 等待中... ($i/30)"
@@ -103,7 +126,7 @@ done
 
 # 显示容器状态
 echo "📊 容器状态："
-docker-compose -f "$DOCKER_COMPOSE_FILE" ps
+$COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" ps
 
 # 健康检查
 echo "🏥 检查应用健康状态..."
@@ -114,7 +137,7 @@ for i in {1..15}; do
     fi
     if [ $i -eq 15 ]; then
         echo "⚠️  应用健康检查失败，但容器已启动，请检查应用日志"
-        echo "📋 查看应用日志: docker-compose -f $DOCKER_COMPOSE_FILE logs app"
+        echo "📋 查看应用日志: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE logs app"
         break
     fi
     echo "⏳ 健康检查中... ($i/15)"
@@ -130,10 +153,10 @@ echo "  - 外网访问: http://$SERVER_IP:$APP_PORT"
 echo "  - 本地访问: http://localhost:$APP_PORT"
 echo ""
 echo "📋 常用管理命令："
-echo "  查看日志: docker-compose -f $DOCKER_COMPOSE_FILE logs -f"
-echo "  停止服务: docker-compose -f $DOCKER_COMPOSE_FILE down"
-echo "  重启服务: docker-compose -f $DOCKER_COMPOSE_FILE restart"
-echo "  查看状态: docker-compose -f $DOCKER_COMPOSE_FILE ps"
-echo "  进入容器: docker-compose -f $DOCKER_COMPOSE_FILE exec app bash"
+echo "  查看日志: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE logs -f"
+echo "  停止服务: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE down"
+echo "  重启服务: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE restart"
+echo "  查看状态: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE ps"
+echo "  进入容器: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE exec app bash"
 echo ""
 echo "💡 提示: 如需更新应用，请重新运行此脚本" 

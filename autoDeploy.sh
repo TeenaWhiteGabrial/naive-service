@@ -27,9 +27,27 @@ for tool in git docker; do
     fi
 done
 
-# 检查Docker Compose
-if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-    echo "❌ Docker Compose 未安装，请先安装Docker Compose"
+# 检查Docker Compose（支持新旧版本）
+echo "🔍 检查 Docker Compose..."
+if command -v docker-compose &> /dev/null; then
+    echo "✅ Docker Compose 已安装: $(docker-compose --version)"
+elif docker compose version &> /dev/null 2>&1; then
+    echo "✅ Docker Compose (plugin) 已安装: $(docker compose version)"
+    # 如果只有新版本的 docker compose，创建兼容性别名
+    if [ ! -f /usr/local/bin/docker-compose ]; then
+        echo "🔧 创建 docker-compose 兼容性别名..."
+        echo '#!/bin/bash' > /usr/local/bin/docker-compose
+        echo 'docker compose "$@"' >> /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+        # 创建软链接到常用路径
+        ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose 2>/dev/null || true
+    fi
+else
+    echo "❌ Docker Compose 未安装"
+    echo "💡 提示：请先安装 Docker Compose"
+    echo "   Ubuntu/Debian: sudo apt-get install docker-compose"
+    echo "   CentOS/RHEL: sudo yum install docker-compose"
+    echo "   或者使用一键部署脚本: sudo bash one-click-deploy.sh"
     exit 1
 fi
 

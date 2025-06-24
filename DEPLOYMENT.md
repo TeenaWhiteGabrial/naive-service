@@ -57,14 +57,15 @@ sudo yum install -y git
 
 ```bash
 # 克隆项目到服务器
-git clone https://github.com/your-username/naive-service.git
+# git clone https://github.com/TeenaWhiteGabrial/naive-service.git
+git clone git@github.com:TeenaWhiteGabrial/naive-service.git
 cd naive-service
 
 # 修改部署脚本中的配置
 vim deploy_production.sh
 
 # 更新以下变量：
-# GIT_REPO="https://github.com/your-username/naive-service.git"
+# GIT_REPO="https://github.com/TeenaWhiteGabrial/naive-service.git"
 # APP_BRANCH="main"  # 你的分支名
 
 # 给脚本执行权限
@@ -81,7 +82,8 @@ sudo ./deploy_production.sh
 ```bash
 sudo mkdir -p /usr/src/code
 cd /usr/src/code
-sudo git clone https://github.com/your-username/naive-service.git
+# sudo git clone https://github.com/TeenaWhiteGabrial/naive-service.git
+sudo git clone https://github.com/TeenaWhiteGabrial/naive-service.git
 cd naive-service
 ```
 

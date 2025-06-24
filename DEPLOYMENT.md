@@ -1,333 +1,282 @@
-# Naive Service Docker 部署指南
+# Naive Service 生产环境部署指南
 
-## 部署准备
+## 🚀 快速部署
 
-### 1. 服务器要求
+### 一键部署（推荐）
 
-- **操作系统**: Linux (Ubuntu 18.04+, CentOS 7+, 或其他主流发行版)
+```bash
+# 1. 下载部署脚本到服务器
+wget https://raw.githubusercontent.com/TeenaWhiteGabrial/naive-service/main/autoDeploy.sh
+
+# 2. 给脚本执行权限
+chmod +x autoDeploy.sh
+
+# 3. 运行部署
+sudo ./autoDeploy.sh
+```
+
+就这么简单！脚本会自动完成所有部署工作。
+
+## 📋 部署要求
+
+### 服务器配置
+- **操作系统**: Linux (Ubuntu 18.04+, CentOS 7+)
 - **内存**: 至少 2GB RAM
-- **磁盘**: 至少 10GB 可用空间
-- **网络**: 能够访问互联网
+- **磁盘**: 至少 5GB 可用空间
+- **网络**: 能够访问互联网和GitHub
 
-### 2. 安装必要软件
+### 必需软件
+- Git
+- Docker
+- Docker Compose
 
-#### 安装 Docker
+> 💡 **提示**: 如果服务器没有安装这些软件，部署脚本会提示您安装命令。
 
-```bash
-# Ubuntu/Debian
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
+## 🔧 手动部署（备选方案）
 
-# CentOS/RHEL
-sudo yum install -y yum-utils
-sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-sudo yum install -y docker-ce docker-ce-cli containerd.io
-sudo systemctl start docker
-sudo systemctl enable docker
-```
+如果自动部署失败，可以按以下步骤手动部署：
 
-#### 安装 Docker Compose
-
-```bash
-# 方法1: 使用 pip
-sudo pip3 install docker-compose
-
-# 方法2: 直接下载
-sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-```
-
-#### 安装 Git
+### 1. 安装依赖
 
 ```bash
 # Ubuntu/Debian
 sudo apt update
-sudo apt install -y git
+sudo apt install -y git docker.io docker-compose
 
 # CentOS/RHEL
-sudo yum install -y git
+sudo yum install -y git docker docker-compose
+sudo systemctl start docker
+sudo systemctl enable docker
 ```
 
-## 部署步骤
-
-### 方法一：使用自动化部署脚本（推荐）
-
-1. **下载并运行部署脚本**
-
-```bash
-# 克隆项目到服务器
-# git clone https://github.com/TeenaWhiteGabrial/naive-service.git
-git clone git@github.com:TeenaWhiteGabrial/naive-service.git
-cd naive-service
-
-# 修改部署脚本中的配置
-vim deploy_production.sh
-
-# 更新以下变量：
-# GIT_REPO="https://github.com/TeenaWhiteGabrial/naive-service.git"
-# APP_BRANCH="main"  # 你的分支名
-
-# 给脚本执行权限
-chmod +x deploy_production.sh
-
-# 运行部署脚本
-sudo ./deploy_production.sh
-```
-
-### 方法二：手动部署
-
-1. **克隆代码**
+### 2. 克隆项目
 
 ```bash
 sudo mkdir -p /usr/src/code
 cd /usr/src/code
-# sudo git clone https://github.com/TeenaWhiteGabrial/naive-service.git
-sudo git clone https://github.com/TeenaWhiteGabrial/naive-service.git
+sudo git clone git@github.com:TeenaWhiteGabrial/naive-service.git
 cd naive-service
 ```
 
-2. **构建并启动服务**
+### 3. 启动服务
 
 ```bash
-# 基础部署（仅应用+数据库）
+# 构建并启动所有服务
 sudo docker-compose -f docker-compose.prod.yml up --build -d
 
-# 或者包含 Nginx 反向代理
-sudo docker-compose -f docker-compose.prod.yml --profile with-nginx up --build -d
-```
-
-3. **查看服务状态**
-
-```bash
-# 查看容器状态
+# 查看服务状态
 sudo docker-compose -f docker-compose.prod.yml ps
-
-# 查看日志
-sudo docker-compose -f docker-compose.prod.yml logs -f
 ```
 
-## 配置说明
+## 📊 服务信息
 
-### 1. 环境变量配置
-
-创建生产环境配置文件 `.env.production`:
-
-```bash
-# 应用配置
-NODE_ENV=production
-PORT=9090
-
-# 数据库配置
-DB_HOST=mongodb
-DB_PORT=27017
-DB_NAME=StarPeaceCompany
-DB_USER=topaz
-DB_PASSWORD=ipcMasterTopazzz
-
-# JWT 配置
-JWT_SECRET=your-strong-jwt-secret-here
-JWT_EXPIRES_IN=30d
-
-# 七牛云配置
-QINIU_ACCESS_KEY=your-access-key
-QINIU_SECRET_KEY=your-secret-key
-QINIU_BUCKET=your-bucket-name
-QINIU_UPLOAD_URL=your-upload-url
-
-# 安全配置
-CORS_ORIGIN=https://your-domain.com
-```
-
-### 2. 端口配置
-
+### 端口配置
 - **应用端口**: 9090
-- **数据库端口**: 27017
-- **Nginx端口**: 80, 443 (如果启用)
+- **数据库端口**: 27017 (内部)
+- **Nginx端口**: 80, 443 (可选)
 
-### 3. 数据持久化
+### 服务组件
+- **应用服务**: Node.js + PM2
+- **数据库**: MongoDB 6.0.2
+- **反向代理**: Nginx (可选)
 
-- **MongoDB数据**: 存储在 Docker volume `mongo-data`
-- **应用日志**: 挂载到 `./logs` 目录
-- **上传文件**: 挂载到 `./uploads` 目录
+### 访问地址
+- **应用**: http://服务器IP:9090
+- **健康检查**: http://服务器IP:9090/health
 
-## 运维命令
+## 🛠️ 运维操作
 
-### 基本操作
+### 查看服务状态
 
 ```bash
-# 查看容器状态
+cd /usr/src/code/naive-service
+
+# 查看所有容器状态
 sudo docker-compose -f docker-compose.prod.yml ps
 
 # 查看实时日志
 sudo docker-compose -f docker-compose.prod.yml logs -f
 
+# 查看特定服务日志
+sudo docker-compose -f docker-compose.prod.yml logs app
+sudo docker-compose -f docker-compose.prod.yml logs mongodb
+```
+
+### 服务管理
+
+```bash
 # 重启服务
 sudo docker-compose -f docker-compose.prod.yml restart
 
 # 停止服务
 sudo docker-compose -f docker-compose.prod.yml down
 
-# 更新并重启服务
-sudo docker-compose -f docker-compose.prod.yml pull
-sudo docker-compose -f docker-compose.prod.yml up -d
+# 重新部署（更新代码）
+sudo ./autoDeploy.sh
 ```
 
-### 数据库操作
-
-```bash
-# 进入 MongoDB 容器
-sudo docker exec -it naive-service-mongodb mongosh
-
-# 备份数据库
-sudo docker exec naive-service-mongodb mongodump --host localhost --port 27017 --username topaz --password ipcMasterTopazzz --db StarPeaceCompany --out /data/backup
-
-# 恢复数据库
-sudo docker exec naive-service-mongodb mongorestore --host localhost --port 27017 --username topaz --password ipcMasterTopazzz --db StarPeaceCompany /data/backup/StarPeaceCompany
-```
-
-### 应用操作
+### 进入容器
 
 ```bash
 # 进入应用容器
-sudo docker exec -it naive-service-app sh
+sudo docker exec -it naive-service-app bash
 
-# 查看应用进程
-sudo docker exec naive-service-app pm2 list
-
-# 查看应用日志
-sudo docker exec naive-service-app pm2 logs
-
-# 重启应用进程
-sudo docker exec naive-service-app pm2 restart all
+# 进入MongoDB容器
+sudo docker exec -it naive-service-mongodb mongosh
 ```
 
-## 监控和日志
+## 🔍 故障排除
 
-### 1. 健康检查
+### 常见问题
 
+#### 1. 端口被占用
 ```bash
-# 检查应用健康状态
+# 查看端口占用
+sudo ss -tlnp | grep :9090
+sudo ss -tlnp | grep :27017
+
+# 脚本会自动处理端口占用问题
+```
+
+#### 2. 容器启动失败
+```bash
+# 查看详细错误日志
+sudo docker-compose -f docker-compose.prod.yml logs --tail=100
+
+# 检查镜像是否正确拉取
+sudo docker images | grep misaka-images
+```
+
+#### 3. 健康检查失败
+```bash
+# 手动检查应用状态
 curl http://localhost:9090/health
 
-# 检查容器健康状态
-sudo docker inspect naive-service-app | grep Health -A 10
+# 查看应用内部日志
+sudo docker exec naive-service-app pm2 logs
 ```
 
-### 2. 日志管理
-
+#### 4. 内存不足
 ```bash
-# 查看应用日志
-tail -f logs/out.log
-tail -f logs/error.log
+# 清理无用的Docker资源
+sudo docker system prune -f
 
-# 查看 Nginx 日志 (如果启用)
-tail -f logs/nginx/access.log
-tail -f logs/nginx/error.log
-```
-
-### 3. 性能监控
-
-```bash
-# 查看容器资源使用情况
-sudo docker stats
-
-# 查看系统资源
-htop
+# 查看系统资源使用
 free -h
 df -h
 ```
 
-## 故障排除
+### 重置部署
 
-### 常见问题
+如果遇到严重问题，可以完全重置：
 
-1. **端口被占用**
 ```bash
-# 查看端口占用
-sudo lsof -i :9090
-sudo lsof -i :27017
+# 停止并删除所有容器
+sudo docker-compose -f docker-compose.prod.yml down -v
 
-# 杀死占用进程
-sudo kill -9 <PID>
+# 清理Docker资源
+sudo docker system prune -a -f
+
+# 重新运行部署脚本
+sudo ./autoDeploy.sh
 ```
 
-2. **容器启动失败**
+## 🔒 安全配置
+
+### 防火墙设置
+
 ```bash
-# 查看容器日志
-sudo docker logs naive-service-app
-sudo docker logs naive-service-mongodb
-
-# 检查 Docker 镜像
-sudo docker images
-```
-
-3. **数据库连接失败**
-```bash
-# 检查数据库容器状态
-sudo docker exec naive-service-mongodb mongosh --eval "db.adminCommand('ping')"
-
-# 检查网络连接
-sudo docker network ls
-sudo docker network inspect naive-service_app-network
-```
-
-4. **内存不足**
-```bash
-# 清理无用镜像
-sudo docker image prune -a
-
-# 清理无用容器
-sudo docker container prune
-
-# 清理无用卷
-sudo docker volume prune
-```
-
-## 安全建议
-
-1. **防火墙配置**
-```bash
-# 仅开放必要端口
-sudo ufw allow 22    # SSH
-sudo ufw allow 80    # HTTP
-sudo ufw allow 443   # HTTPS
-sudo ufw allow 9090  # 应用端口 (可选，建议通过Nginx代理)
+# Ubuntu (ufw)
+sudo ufw allow 22        # SSH
+sudo ufw allow 9090      # 应用端口
 sudo ufw enable
+
+# CentOS (firewalld)
+sudo firewall-cmd --permanent --add-port=22/tcp
+sudo firewall-cmd --permanent --add-port=9090/tcp
+sudo firewall-cmd --reload
 ```
 
-2. **SSL证书配置**
-- 使用 Let's Encrypt 获取免费 SSL 证书
-- 配置 Nginx HTTPS
+### 环境变量
 
-3. **定期备份**
-- 设置 cron 任务定期备份数据库
-- 备份重要配置文件
-
-## 扩展配置
-
-### 1. 负载均衡
-
-如需要负载均衡，可以修改 `docker-compose.prod.yml` 中的 app 服务：
+项目使用的主要环境变量（在 docker-compose.prod.yml 中配置）：
 
 ```yaml
-app:
-  deploy:
-    replicas: 3
-    resources:
-      limits:
-        cpus: "0.50"
-        memory: 512M
+environment:
+  NODE_ENV: production
+  PORT: 9090
+  DB_HOST: mongodb
+  DB_PORT: 27017
+  DB_NAME: StarPeaceCompany
+  DB_USER: topaz
+  DB_PASSWORD: ipcMasterTopazzz
 ```
 
-### 2. 外部数据库
+> ⚠️ **安全提示**: 生产环境请修改默认的数据库密码
 
-如果使用外部 MongoDB 服务，修改环境变量：
+## 📈 性能优化
+
+### 容器资源限制
+
+可以在 docker-compose.prod.yml 中添加资源限制：
+
+```yaml
+services:
+  app:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "0.5"
+```
+
+### 启用 Nginx (可选)
 
 ```bash
-DB_HOST=your-external-mongodb-host
-DB_PORT=27017
-MONGODB_URI=mongodb://user:pass@external-host:27017/dbname
+# 启用Nginx反向代理
+sudo docker-compose -f docker-compose.prod.yml --profile with-nginx up -d
 ```
 
-然后从 `docker-compose.prod.yml` 中移除 mongodb 服务。 
+## 🔄 更新部署
+
+### 自动更新
+
+```bash
+# 重新运行部署脚本即可自动更新
+sudo ./autoDeploy.sh
+```
+
+### 手动更新
+
+```bash
+cd /usr/src/code/naive-service
+
+# 拉取最新代码
+sudo git pull origin main
+
+# 重新构建并启动
+sudo docker-compose -f docker-compose.prod.yml up --build -d
+```
+
+## 📞 技术支持
+
+如果遇到问题：
+
+1. 检查 [故障排除](#-故障排除) 部分
+2. 查看项目 GitHub Issues
+3. 联系项目维护者
+
+---
+
+## 📝 部署脚本说明
+
+`autoDeploy.sh` 脚本会自动执行以下操作：
+
+1. ✅ 检查系统环境（git, docker, docker-compose）
+2. ✅ 克隆或更新项目代码
+3. ✅ 清理旧容器和端口占用
+4. ✅ 构建并启动新容器
+5. ✅ 验证服务健康状态
+6. ✅ 显示访问信息和管理命令
+
+整个过程全自动化，无需手动干预。 

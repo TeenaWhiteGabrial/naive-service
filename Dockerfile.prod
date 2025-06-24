@@ -10,10 +10,6 @@ COPY node_modules ./node_modules
 COPY package*.json ./
 COPY src/assets ./src/assets
 
-# 全局安装 PM2
-RUN npm config set registry https://registry.npmmirror.com
-RUN npm install -g pm2
-
 # 创建日志目录
 RUN mkdir -p logs
 
@@ -36,5 +32,5 @@ RUN echo 'module.exports = {\n\
 # 暴露端口
 EXPOSE 9090
 
-# 启动应用
-CMD ["pm2-runtime", "start", "ecosystem.config.js"] 
+# 启动应用（使用 npx 运行本地安装的 PM2）
+CMD ["npx", "pm2-runtime", "start", "ecosystem.config.js"] 

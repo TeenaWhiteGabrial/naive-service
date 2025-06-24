@@ -91,13 +91,18 @@ fi
 
 # 在服务器环境安装依赖
 print_info "在服务器环境安装 Node.js 依赖..."
-npm config set registry https://registry.npmmirror.com
-npm install
+nrm use taobao
+pnpm install
 print_message "依赖安装完成"
+
+# 在服务器环境安装 PM2 作为项目依赖
+print_info "在服务器环境安装 PM2..."
+pnpm install pm2
+print_message "PM2 安装完成"
 
 # 在服务器环境打包项目
 print_info "在服务器环境打包项目..."
-npm run build
+pnpm run build
 print_message "项目打包完成"
 
 # 创建 Docker 构建目录

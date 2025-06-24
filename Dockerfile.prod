@@ -5,22 +5,22 @@ FROM registry.cn-hangzhou.aliyuncs.com/misaka-images/node:20.8.1
 WORKDIR /usr/src/app
 
 # 设置 npm 国内镜像源
-RUN nrm use taobao
+RUN npm config set registry https://registry.npmmirror.com
 
 # 复制包管理文件
 COPY package*.json ./
 
 # 安装依赖
-RUN pnpm install --only=production --no-optional
+RUN npm install 
 
 # 复制源码
 COPY . .
 
 # 构建应用
-RUN pnpm run build
+RUN npm run build
 
 # 安装 PM2
-RUN pnpm install -g pm2
+RUN npm install -g pm2
 
 # 创建日志目录
 RUN mkdir -p logs

@@ -1,0 +1,51 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Naive Service 项目概览
+
+这是一个基于 Koa.js 和 TypeScript 的 Node.js 后端服务项目。
+
+## 项目结构
+
+- **入口文件**: [app.ts](mdc:src/app.ts) - 应用程序的主入口点
+- **配置文件**: [package.json](mdc:package.json) - 项目依赖和脚本配置
+- **TypeScript配置**: [tsconfig.json](mdc:tsconfig.json) - TypeScript编译配置
+
+## 主要目录
+
+### 核心模块
+- `src/controllers/` - 控制器层，处理业务逻辑
+- `src/router/` - 路由配置，包含自动路由注册系统
+- `src/middleware/` - 中间件层
+- `src/services/` - 服务层，封装业务逻辑
+- `src/models/` - 数据模型定义
+
+### 配置和工具
+- `src/config/` - 配置文件目录
+- `src/utils/` - 工具函数库
+- `src/type/` - TypeScript 类型定义
+- `src/log/` - 日志配置和处理
+- `src/assets/` - 静态资源文件
+
+## 技术栈
+
+- **框架**: Koa.js
+- **语言**: TypeScript
+- **数据库**: MongoDB
+- **进程管理**: PM2
+- **日志**: log4js
+- **容器化**: Docker
+- **包管理**: pnpm
+
+## 主要特性
+
+- 自动路由注册系统
+- 统一错误处理
+- 日志记录
+- 跨域支持
+- JWT认证
+- 文件上传（七牛云）
+- OpenAI集成
+

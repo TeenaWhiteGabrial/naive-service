@@ -29,7 +29,7 @@ fi
 # 定义项目需要的所有镜像
 declare -A IMAGES=(
     ["MongoDB"]="registry.cn-hangzhou.aliyuncs.com/misaka-images/mongo:6.0.2"
-    ["Node.js (构建阶段)"]="registry.cn-hangzhou.aliyuncs.com/misaka-images/node:20.8.1-alpine"
+    ["Node.js (构建阶段)"]="registry.cn-hangzhou.aliyuncs.com/misaka-images/node:20.8.1"
     ["Node.js (开发环境)"]="registry.cn-hangzhou.aliyuncs.com/misaka-images/node:20.8.1"
     ["Nginx (可选)"]="registry.cn-hangzhou.aliyuncs.com/misaka-images/nginx:alpine"
 )

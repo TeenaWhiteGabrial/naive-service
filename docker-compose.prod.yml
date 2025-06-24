@@ -1,13 +1,11 @@
-version: '3.8'
-
+# 使用 host 网络模式的生产环境配置
 services:
   # MongoDB 数据库服务
   mongodb:
     image: registry.cn-hangzhou.aliyuncs.com/misaka-images/mongo:6.0.2
     container_name: naive-service-mongodb
     restart: unless-stopped
-    ports:
-      - "27017:27017"
+    network_mode: "host"  # 使用主机网络
     environment:
       MONGO_INITDB_ROOT_USERNAME: topaz
       MONGO_INITDB_ROOT_PASSWORD: ipcMasterTopazzz
@@ -15,7 +13,7 @@ services:
     volumes:
       - mongo-data:/data/db
       - ./mongodb-logs:/var/log/mongodb
-    command: ["mongod", "--logpath", "/var/log/mongodb/mongod.log", "--logappend"]
+    command: ["mongod", "--bind_ip", "0.0.0.0", "--port", "27017", "--logpath", "/var/log/mongodb/mongod.log", "--logappend"]
 
   # 应用服务
   app:
@@ -24,13 +22,12 @@ services:
       dockerfile: Dockerfile.prod
     container_name: naive-service-app
     restart: unless-stopped
-    ports:
-      - "9090:9090"
+    network_mode: "host"  # 使用主机网络
     environment:
       NODE_ENV: production
       PORT: 9090
       # MongoDB 连接配置
-      DB_HOST: mongodb
+      DB_HOST: localhost
       DB_PORT: 27017
       DB_NAME: StarPeaceCompany
       DB_USER: topaz

@@ -152,9 +152,38 @@ print_message "端口 27017 可用"
 print_info "清理无用的Docker资源..."
 docker system prune -f > /dev/null 2>&1
 
-# 清理可能冲突的网络
-print_info "清理Docker网络..."
+# 彻底修复 Docker 网络问题
+print_info "修复 Docker 网络问题..."
+
+# 停止所有运行中的容器
+print_info "停止所有运行中的容器..."
+docker ps -q | xargs docker stop 2>/dev/null || true
+
+# 清理所有网络
+print_info "清理所有 Docker 网络..."
 docker network prune -f 2>/dev/null || true
+
+# 重置 Docker 服务
+print_info "重置 Docker 服务..."
+systemctl stop docker
+sleep 2
+systemctl start docker
+sleep 5
+print_message "Docker 服务已重置"
+
+# 检查 Docker 服务状态
+print_info "检查 Docker 服务状态..."
+if ! systemctl is-active docker > /dev/null; then
+    print_error "Docker 服务未运行"
+    print_info "尝试启动 Docker 服务..."
+    systemctl start docker
+    sleep 5
+    if ! systemctl is-active docker > /dev/null; then
+        print_error "无法启动 Docker 服务，请手动检查"
+        exit 1
+    fi
+fi
+print_message "Docker 服务正常运行"
 
 # 构建并启动容器
 print_info "构建并启动容器..."

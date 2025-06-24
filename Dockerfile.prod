@@ -29,8 +29,5 @@ RUN echo 'module.exports = {\n\
   }]\n\
 };' > ecosystem.config.js
 
-# 暴露端口
-EXPOSE 9090
-
-# 启动应用（使用 npx 运行本地安装的 PM2）
-CMD ["npx", "pm2-runtime", "start", "ecosystem.config.js"] 
+# 启动应用（使用 node 直接启动，避免 PM2 问题）
+CMD ["node", "dist/app.js"] 

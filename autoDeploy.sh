@@ -84,7 +84,7 @@ if [ -d "naive-service" ]; then
     print_message "代码更新完成"
 else
     print_info "克隆代码仓库..."
-    git clone https://github.com/TeenaWhiteGabrial/naive-service.git
+    git clone git@github.com:TeenaWhiteGabrial/naive-service.git
     cd naive-service
     print_message "代码克隆完成"
 fi

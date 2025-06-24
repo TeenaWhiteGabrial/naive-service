@@ -6,19 +6,15 @@ WORKDIR /usr/src/app
 
 # 复制包管理文件
 COPY package*.json ./
-COPY pnpm-lock.yaml ./
-
-# 安装 pnpm
-RUN npm install -g pnpm
 
 # 安装依赖 (仅生产依赖)
-RUN pnpm install --frozen-lockfile --prod
+RUN npm install --only=production
 
 # 复制源码
 COPY . .
 
 # 构建应用
-RUN pnpm run build
+RUN npm run build
 
 # 生产阶段
 FROM registry.cn-hangzhou.aliyuncs.com/misaka-images/node:20.8.1 AS production

@@ -1,212 +1,183 @@
 #!/bin/bash
 
-# Naive Service 生产环境部署脚本
-# 使用方法: chmod +x autoDeploy.sh && sudo ./autoDeploy.sh
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-set -e  # 遇到错误立即退出
+# 打印带颜色的消息
+print_message() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
 
-# 定义变量
-GIT_REPO="git@github.com:TeenaWhiteGabrial/naive-service.git"
-APP_DIR="/usr/src/code/naive-service"
-APP_BRANCH="main"
-DOCKER_COMPOSE_FILE="docker-compose.prod.yml"
-APP_PORT=9090
-MONGO_PORT=27017
-APP_CONTAINER_NAME="naive-service-app"
-MONGO_CONTAINER_NAME="naive-service-mongodb"
+print_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
 
-echo "🚀 开始生产环境部署 Naive Service 项目..."
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
 
-# 检查是否以root权限运行
-if [[ $EUID -ne 0 ]]; then
-   echo "❌ 请使用 sudo 运行此脚本"
-   exit 1
-fi
+print_info() {
+    echo -e "${BLUE}🔍 $1${NC}"
+}
 
-# 检查基础工具是否安装
-echo "🔍 检查基础工具..."
-for tool in git docker; do
-    if ! command -v $tool &> /dev/null; then
-        echo "❌ $tool 未安装，请先安装"
-        exit 1
-    fi
-done
+echo -e "${BLUE}🚀 开始生产环境部署 Naive Service 项目...${NC}"
 
-# 检查Docker Compose（支持新旧版本）
-echo "🔍 检查 Docker Compose..."
-if command -v docker-compose &> /dev/null; then
-    echo "✅ Docker Compose 已安装"
-elif docker compose version &> /dev/null 2>&1; then
-    echo "✅ Docker Compose (plugin) 已安装"
-    # 如果只有新版本的 docker compose，创建兼容性别名
-    if [ ! -f /usr/local/bin/docker-compose ]; then
-        echo "🔧 创建 docker-compose 兼容性别名..."
-        echo '#!/bin/bash' > /usr/local/bin/docker-compose
-        echo 'docker compose "$@"' >> /usr/local/bin/docker-compose
-        chmod +x /usr/local/bin/docker-compose
-        # 创建软链接到常用路径
-        ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose 2>/dev/null || true
-    fi
-else
-    echo "❌ Docker Compose 未安装"
-    echo "💡 提示：请先安装 Docker Compose"
-    echo "   Ubuntu/Debian: sudo apt-get install docker-compose"
-    echo "   CentOS/RHEL: sudo yum install docker-compose"
+# 检查必要工具
+print_info "检查基础工具..."
+
+# 检查 git
+if ! command -v git &> /dev/null; then
+    print_error "Git 未安装"
+    echo "请安装 Git: sudo apt install git 或 sudo yum install git"
     exit 1
 fi
 
-# 创建应用目录
-echo "📁 准备应用目录..."
-mkdir -p "$(dirname "$APP_DIR")"
-
-# 初始化或更新代码仓库
-if [ -d "$APP_DIR/.git" ]; then
-    echo "📥 更新现有代码仓库..."
-    cd "$APP_DIR"
-    git fetch origin
-    git reset --hard origin/$APP_BRANCH
-    git clean -fd
-else
-    echo "📥 克隆代码仓库..."
-    if [ -d "$APP_DIR" ]; then
-        rm -rf "$APP_DIR"
-    fi
-    git clone --branch "$APP_BRANCH" "$GIT_REPO" "$APP_DIR"
-    cd "$APP_DIR"
-fi
-
-# 检查是否在正确的项目目录中
-if [ ! -f "$DOCKER_COMPOSE_FILE" ]; then
-    echo "❌ 未找到 $DOCKER_COMPOSE_FILE 文件，项目可能有问题"
+# 检查 node
+if ! command -v node &> /dev/null; then
+    print_error "Node.js 未安装"
+    echo "请安装 Node.js: https://nodejs.org/"
     exit 1
 fi
 
-echo "✅ 代码准备完成，开始部署..."
+# 检查 npm
+if ! command -v npm &> /dev/null; then
+    print_error "npm 未安装"
+    exit 1
+fi
 
-# 优化的停止和清理函数
-cleanup_containers() {
-    echo "🧹 清理现有容器和服务..."
-    
-    # 停止 docker-compose 服务（兼容新旧版本）
-    if command -v docker-compose &> /dev/null; then
-        if docker-compose -f "$DOCKER_COMPOSE_FILE" ps -q 2>/dev/null | grep -q .; then
-            echo "⏹️  停止 Docker Compose 服务..."
-            docker-compose -f "$DOCKER_COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
-        fi
-    elif docker compose version &> /dev/null 2>&1; then
-        if docker compose -f "$DOCKER_COMPOSE_FILE" ps -q 2>/dev/null | grep -q .; then
-            echo "⏹️  停止 Docker Compose 服务..."
-            docker compose -f "$DOCKER_COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
-        fi
-    fi
-    
-    # 清理指定名称的容器（如果存在）
-    for container in $APP_CONTAINER_NAME $MONGO_CONTAINER_NAME; do
-        if [ "$(docker ps -aq -f name=$container)" ]; then
-            echo "🗑️  清理容器: $container"
-            docker stop $container 2>/dev/null || true
-            docker rm $container 2>/dev/null || true
-        fi
-    done
-}
+# 检查 docker
+if ! command -v docker &> /dev/null; then
+    print_error "Docker 未安装"
+    echo "请安装 Docker: sudo apt install docker.io 或 sudo yum install docker"
+    exit 1
+fi
 
-# 检查端口占用的函数
-check_ports() {
-    echo "🔍 检查端口占用情况..."
-    
-    for port in $APP_PORT $MONGO_PORT; do
-        if ss -tlnp | grep -q ":$port "; then
-            echo "⚠️  端口 $port 被占用，自动释放..."
-            fuser -k $port/tcp 2>/dev/null || true
-            echo "✅ 端口 $port 已释放"
-        else
-            echo "✅ 端口 $port 可用"
-        fi
-    done
-}
-
-# 执行清理
-cleanup_containers
-
-# 检查端口
-check_ports
-
-# 清理无用的镜像和容器
-echo "🧹 清理无用的Docker资源..."
-docker container prune -f >/dev/null 2>&1 || true
-docker image prune -f >/dev/null 2>&1 || true
-
-# 构建并启动容器
-echo "🔨 构建并启动容器..."
-
-# 确定使用的 Docker Compose 命令
+# 检查 Docker Compose
+print_info "检查 Docker Compose..."
 if command -v docker-compose &> /dev/null; then
     COMPOSE_CMD="docker-compose"
-elif docker compose version &> /dev/null 2>&1; then
+elif docker compose version &> /dev/null; then
     COMPOSE_CMD="docker compose"
 else
-    echo "❌ Docker Compose 未找到，请检查安装"
+    print_error "Docker Compose 未安装"
+    echo "请安装 Docker Compose"
     exit 1
 fi
+print_message "Docker Compose 已安装"
 
-# 构建和启动
-if $COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" up --build -d; then
-    echo "✅ 容器构建和启动成功"
+# 准备工作目录
+print_info "准备应用目录..."
+APP_DIR="/usr/src/code/naive-service"
+mkdir -p /usr/src/code
+
+# 下载或更新代码
+cd /usr/src/code
+if [ -d "naive-service" ]; then
+    print_info "更新现有代码仓库..."
+    cd naive-service
+    git fetch origin
+    git reset --hard origin/main
+    print_message "代码更新完成"
 else
-    echo "❌ 容器构建失败"
-    echo "📋 查看错误日志: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE logs"
+    print_info "克隆代码仓库..."
+    git clone https://github.com/TeenaWhiteGabrial/naive-service.git
+    cd naive-service
+    print_message "代码克隆完成"
+fi
+
+# 在服务器环境安装依赖
+print_info "在服务器环境安装 Node.js 依赖..."
+npm config set registry https://registry.npmmirror.com
+npm install
+print_message "依赖安装完成"
+
+# 在服务器环境打包项目
+print_info "在服务器环境打包项目..."
+npm run build
+print_message "项目打包完成"
+
+# 创建 Docker 构建目录
+print_info "准备 Docker 构建环境..."
+BUILD_DIR="/tmp/naive-service-build"
+rm -rf $BUILD_DIR
+mkdir -p $BUILD_DIR
+
+# 复制必要文件到构建目录
+cp -r dist $BUILD_DIR/
+cp -r node_modules $BUILD_DIR/
+cp package*.json $BUILD_DIR/
+if [ -d "src/assets" ]; then
+    mkdir -p $BUILD_DIR/src
+    cp -r src/assets $BUILD_DIR/src/
+fi
+
+# 复制 Docker 相关文件
+cp docker-compose.prod.yml $BUILD_DIR/
+cp Dockerfile.prod $BUILD_DIR/
+
+print_message "构建文件准备完成"
+
+# 清理现有容器和服务
+print_info "清理现有容器和服务..."
+cd $APP_DIR
+$COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
+
+# 检查并释放端口
+print_info "检查端口占用情况..."
+if ss -tlnp | grep -q ":9090 "; then
+    print_warning "端口 9090 被占用，正在释放..."
+    fuser -k 9090/tcp 2>/dev/null || true
+    sleep 2
+fi
+
+if ss -tlnp | grep -q ":27017 "; then
+    print_warning "端口 27017 被占用，正在释放..."
+    fuser -k 27017/tcp 2>/dev/null || true
+    sleep 2
+fi
+
+print_message "端口 9090 可用"
+print_message "端口 27017 可用"
+
+# 清理无用资源
+print_info "清理无用的Docker资源..."
+docker system prune -f > /dev/null 2>&1
+
+# 构建并启动容器
+print_info "构建并启动容器..."
+cd $BUILD_DIR
+$COMPOSE_CMD -f docker-compose.prod.yml up --build -d
+
+# 等待服务启动
+print_info "等待服务启动..."
+sleep 10
+
+# 检查服务状态
+print_info "检查服务状态..."
+if $COMPOSE_CMD -f docker-compose.prod.yml ps | grep -q "Up"; then
+    print_message "容器启动成功"
+    
+    # 获取服务器IP
+    SERVER_IP=$(hostname -I | awk '{print $1}')
+    
+    echo -e "\n${GREEN}🎉 部署成功！${NC}"
+    echo -e "📱 应用访问地址: ${BLUE}http://$SERVER_IP:9090${NC}"
+    echo -e "📊 健康检查: ${BLUE}http://$SERVER_IP:9090/health${NC}"
+    echo -e "\n${YELLOW}📋 常用管理命令:${NC}"
+    echo -e "  查看日志: ${BLUE}cd $APP_DIR && $COMPOSE_CMD -f docker-compose.prod.yml logs -f${NC}"
+    echo -e "  重启服务: ${BLUE}cd $APP_DIR && $COMPOSE_CMD -f docker-compose.prod.yml restart${NC}"
+    echo -e "  停止服务: ${BLUE}cd $APP_DIR && $COMPOSE_CMD -f docker-compose.prod.yml down${NC}"
+else
+    print_error "容器启动失败"
+    echo -e "📋 查看错误日志: ${BLUE}$COMPOSE_CMD -f docker-compose.prod.yml logs${NC}"
     exit 1
 fi
 
-# 等待容器启动
-echo "⏳ 等待容器启动..."
-for i in {1..30}; do
-    if $COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" ps | grep -q "Up"; then
-        echo "✅ 容器启动成功"
-        break
-    fi
-    if [ $i -eq 30 ]; then
-        echo "❌ 容器启动超时，查看日志："
-        $COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" logs --tail=50
-        exit 1
-    fi
-    echo "⏳ 等待中... ($i/30)"
-    sleep 2
-done
+# 清理临时构建目录
+rm -rf $BUILD_DIR
 
-# 显示容器状态
-echo "📊 容器状态："
-$COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" ps
-
-# 健康检查
-echo "🏥 检查应用健康状态..."
-for i in {1..15}; do
-    if curl -f -s http://localhost:$APP_PORT/health >/dev/null 2>&1; then
-        echo "✅ 应用健康检查通过"
-        break
-    fi
-    if [ $i -eq 15 ]; then
-        echo "⚠️  应用健康检查失败，但容器已启动，请检查应用日志"
-        echo "📋 查看应用日志: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE logs app"
-        break
-    fi
-    echo "⏳ 健康检查中... ($i/15)"
-    sleep 2
-done
-
-# 显示访问信息
-SERVER_IP=$(curl -s --connect-timeout 5 http://checkip.amazonaws.com/ 2>/dev/null || hostname -I | awk '{print $1}' || echo "localhost")
-echo ""
-echo "🎉 部署完成！"
-echo "📍 应用访问地址："
-echo "  - 外网访问: http://$SERVER_IP:$APP_PORT"
-echo "  - 本地访问: http://localhost:$APP_PORT"
-echo ""
-echo "📋 常用管理命令："
-echo "  查看日志: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE logs -f"
-echo "  停止服务: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE down"
-echo "  重启服务: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE restart"
-echo "  查看状态: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE ps"
-echo "  进入容器: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE exec app bash"
-echo ""
-echo "💡 提示: 如需更新应用，请重新运行此脚本"
+print_message "部署完成，临时文件已清理"

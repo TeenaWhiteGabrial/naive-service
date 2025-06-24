@@ -1,25 +1,16 @@
-# 生产环境 Dockerfile
+# 生产环境 Dockerfile - 简化版
 FROM registry.cn-hangzhou.aliyuncs.com/misaka-images/node:20.8.1
 
 # 设置工作目录
 WORKDIR /usr/src/app
 
-# 设置 npm 国内镜像源
-RUN npm config set registry https://registry.npmmirror.com
-
-# 复制包管理文件
+# 复制已经构建好的文件（从服务器构建目录）
+COPY dist ./dist
+COPY node_modules ./node_modules
 COPY package*.json ./
+COPY src/assets ./src/assets
 
-# 安装依赖
-RUN npm install 
-
-# 复制源码
-COPY . .
-
-# 构建应用
-RUN npm run build
-
-# 安装 PM2
+# 全局安装 PM2
 RUN npm install -g pm2
 
 # 创建日志目录

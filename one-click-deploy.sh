@@ -86,10 +86,7 @@ install_docker_compose() {
     
     # 尝试通过 curl 下载安装
     echo "📥 从 GitHub 下载 Docker Compose..."
-    COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '"tag_name": "\K.*?(?=")')
-    if [ -z "$COMPOSE_VERSION" ]; then
-        COMPOSE_VERSION="v2.24.1"  # 备用版本
-    fi
+    COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '"tag_name": "\K.*?(?=")' || echo "v2.24.1")
     
     curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
@@ -100,7 +97,6 @@ install_docker_compose() {
     # 验证安装
     if command -v docker-compose &> /dev/null; then
         echo "✅ Docker Compose 安装成功"
-        docker-compose --version
     else
         echo "❌ Docker Compose 安装失败"
         return 1
@@ -109,9 +105,9 @@ install_docker_compose() {
 
 # 检查 Docker Compose
 if command -v docker-compose &> /dev/null; then
-    echo "✅ Docker Compose 已安装: $(docker-compose --version)"
+    echo "✅ Docker Compose 已安装"
 elif docker compose version &> /dev/null; then
-    echo "✅ Docker Compose (plugin) 已安装: $(docker compose version)"
+    echo "✅ Docker Compose (plugin) 已安装"
     # 创建 docker-compose 别名
     echo '#!/bin/bash' > /usr/local/bin/docker-compose
     echo 'docker compose "$@"' >> /usr/local/bin/docker-compose
@@ -121,19 +117,6 @@ else
 fi
 
 echo "✅ 基础工具安装完成"
-
-# 验证所有工具
-echo "🔍 验证安装的工具..."
-echo "Git版本: $(git --version)"
-echo "Docker版本: $(docker --version)"
-if command -v docker-compose &> /dev/null; then
-    echo "Docker Compose版本: $(docker-compose --version)"
-elif docker compose version &> /dev/null; then
-    echo "Docker Compose版本: $(docker compose version)"
-else
-    echo "❌ Docker Compose 验证失败"
-    exit 1
-fi
 
 # 创建应用目录
 echo "📁 准备应用目录..."

@@ -60,17 +60,9 @@ check_ports() {
     
     for port in $APP_PORT $MONGO_PORT; do
         if ss -tlnp | grep -q ":$port "; then
-            echo "⚠️  端口 $port 被占用"
-            # 显示占用进程但不强制杀死，让用户决定
-            echo "占用进程信息："
-            ss -tlnp | grep ":$port " || true
-            
-            read -p "是否要停止占用端口 $port 的进程? (y/N): " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                fuser -k $port/tcp 2>/dev/null || true
-                echo "✅ 端口 $port 已释放"
-            fi
+            echo "⚠️  端口 $port 被占用，自动释放..."
+            fuser -k $port/tcp 2>/dev/null || true
+            echo "✅ 端口 $port 已释放"
         else
             echo "✅ 端口 $port 可用"
         fi
@@ -90,12 +82,55 @@ docker image prune -f >/dev/null 2>&1 || true
 
 # 构建并启动容器
 echo "🔨 构建并启动容器..."
-if command -v docker-compose &> /dev/null; then
-    docker-compose -f "$DOCKER_COMPOSE_FILE" up --build -d
-elif docker compose version &> /dev/null 2>&1; then
-    docker compose -f "$DOCKER_COMPOSE_FILE" up --build -d
-else
-    echo "❌ Docker Compose 未找到，请检查安装"
+
+# 构建重试函数
+build_with_retry() {
+    local max_attempts=3
+    local attempt=1
+    
+    while [ $attempt -le $max_attempts ]; do
+        echo "📦 尝试构建和启动容器 (第 $attempt/$max_attempts 次)..."
+        
+        if command -v docker-compose &> /dev/null; then
+            COMPOSE_CMD="docker-compose"
+        elif docker compose version &> /dev/null 2>&1; then
+            COMPOSE_CMD="docker compose"
+        else
+            echo "❌ Docker Compose 未找到，请检查安装"
+            exit 1
+        fi
+        
+        # 尝试构建和启动
+        if $COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" up --build -d; then
+            echo "✅ 容器构建和启动成功"
+            return 0
+        else
+            echo "❌ 第 $attempt 次尝试失败"
+            
+            if [ $attempt -eq $max_attempts ]; then
+                echo "🚨 所有构建尝试都失败了"
+                echo "💡 可能的解决方案："
+                echo "   1. 检查网络连接"
+                echo "   2. 检查 docker-compose.prod.yml 文件"
+                echo "   3. 查看详细错误日志: $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE logs"
+                return 1
+            fi
+            
+            echo "⏳ 等待 10 秒后重试..."
+            sleep 10
+            
+            # 清理失败的容器
+            echo "🧹 清理失败的构建..."
+            $COMPOSE_CMD -f "$DOCKER_COMPOSE_FILE" down 2>/dev/null || true
+        fi
+        
+        ((attempt++))
+    done
+}
+
+# 执行构建
+if ! build_with_retry; then
+    echo "❌ 容器构建失败，部署终止"
     exit 1
 fi
 

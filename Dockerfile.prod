@@ -1,0 +1,86 @@
+# 多阶段构建 - 构建阶段
+FROM node:20.8.1-alpine AS builder
+
+# 设置工作目录
+WORKDIR /usr/src/app
+
+# 复制包管理文件
+COPY package*.json ./
+COPY pnpm-lock.yaml ./
+
+# 安装 pnpm
+RUN npm install -g pnpm
+
+# 安装依赖 (仅生产依赖)
+RUN pnpm install --frozen-lockfile --prod
+
+# 复制源码
+COPY . .
+
+# 构建应用
+RUN pnpm run build
+
+# 生产阶段
+FROM node:20.8.1-alpine AS production
+
+# 安装必要的系统依赖
+RUN apk add --no-cache \
+    curl \
+    tzdata \
+    && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone
+
+# 创建非root用户
+RUN addgroup -g 1001 -S nodejs \
+    && adduser -S nodeuser -u 1001
+
+# 设置工作目录
+WORKDIR /usr/src/app
+
+# 安装 PM2
+RUN npm install -g pm2
+
+# 从构建阶段复制文件
+COPY --from=builder --chown=nodeuser:nodejs /usr/src/app/dist ./dist
+COPY --from=builder --chown=nodeuser:nodejs /usr/src/app/node_modules ./node_modules
+COPY --from=builder --chown=nodeuser:nodejs /usr/src/app/package*.json ./
+COPY --from=builder --chown=nodeuser:nodejs /usr/src/app/src/assets ./src/assets
+
+# 创建日志目录
+RUN mkdir -p /usr/src/app/logs && chown -R nodeuser:nodejs /usr/src/app/logs
+
+# 创建PM2配置文件
+COPY --chown=nodeuser:nodejs <<EOF /usr/src/app/ecosystem.config.js
+module.exports = {
+  apps: [{
+    name: 'naive-service',
+    script: './dist/app.js',
+    instances: 'max',
+    exec_mode: 'cluster',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 9090
+    },
+    log_file: './logs/combined.log',
+    out_file: './logs/out.log',
+    error_file: './logs/error.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    merge_logs: true,
+    max_memory_restart: '500M',
+    node_args: '--max-old-space-size=512'
+  }]
+};
+EOF
+
+# 切换到非root用户
+USER nodeuser
+
+# 暴露端口
+EXPOSE 9090
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:9090/health || exit 1
+
+# 启动应用
+CMD ["pm2-runtime", "start", "ecosystem.config.js"] 
